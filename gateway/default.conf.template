@@ -24,10 +24,8 @@ server {
     default_type application/json;
     access_log /dev/stdout cybernews;
     resolver 127.0.0.11 valid=5s ipv6=off;
-
-    location = / {
-        return 200 '{"service":"gateway","status":"ok"}';
-    }
+    root /usr/share/nginx/cybernews;
+    absolute_redirect off;
 
     location = /health {
         return 200 '{"service":"gateway","status":"ok"}';
@@ -48,12 +46,49 @@ server {
         proxy_set_header X-Internal-Key "";
         proxy_connect_timeout 3s;
         proxy_read_timeout 15s;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
 
         rewrite ^/api/v1/[^/]+(/.*)$ $1 break;
         proxy_pass http://$api_upstream;
     }
 
-    location / {
+    location ~ ^/(?:api|internal)(?:/|$) {
         return 404 '{"detail":"Not Found"}';
+    }
+
+    location = /index.html {
+        include /etc/nginx/cybernews-frontend-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+
+    location = /admin {
+        return 308 /admin/;
+    }
+
+    location = /admin/index.html {
+        include /etc/nginx/cybernews-frontend-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+
+    location /admin/ {
+        rewrite ^ /admin/index.html last;
+    }
+
+    location ~ ^/(?:favicon\.svg$|(?:css|js|locales)/[a-zA-Z0-9_/.-]+\.(?:css|js|json|svg)$) {
+        include /etc/nginx/cybernews-frontend-headers.conf;
+        add_header Cache-Control "public, max-age=300" always;
+        try_files $uri =404;
+    }
+
+    location ~ ^/(?:css|js|locales)/ {
+        return 404;
+    }
+
+    location / {
+        rewrite ^ /index.html last;
     }
 }

@@ -1,0 +1,53 @@
+:root {
+  color-scheme: light;
+  --paper: #f4f6f4;
+  --surface: #fff;
+  --raised: #eef2ee;
+  --ink: #171f1a;
+  --muted: #4f6055;
+  --subtle: #5c6c62;
+  --line: #d6dfd7;
+  --accent: #255647;
+  --accent-hover: #193f34;
+  --on-accent: #fff;
+  --tint: #e4f0e8;
+  --focus: #2d7964;
+  --danger: #a32931;
+  --danger-tint: #f9e9e9;
+  --splash: #19372e;
+  --splash-ink: #f1f9f3;
+  --splash-muted: #bbd4c6;
+  --splash-rule: #416659;
+  --signal: #b6e6bb;
+  --shadow: 0 14px 40px #0a29131a;
+  --soft-shadow: 0 2px 3px #132b1407;
+  --radius: .7rem;
+  --control: 2.75rem;
+  --width: 82rem;
+  --gutter: clamp(1rem, 4vw, 3.25rem);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #131916;
+  --surface: #1b231e;
+  --raised: #253028;
+  --ink: #eff6f0;
+  --muted: #b8c7bc;
+  --subtle: #a2b3a6;
+  --line: #39473e;
+  --accent: #99d3b6;
+  --accent-hover: #c1e8cf;
+  --on-accent: #122a20;
+  --tint: #293f33;
+  --focus: #a4e7c4;
+  --danger: #ffb2b7;
+  --danger-tint: #472a2c;
+  --splash: #172f27;
+  --splash-ink: #f1f9f3;
+  --splash-muted: #b7d0c1;
+  --splash-rule: #47695b;
+  --signal: #a9dcb6;
+  --shadow: 0 14px 40px #0005;
+  --soft-shadow: 0 2px 3px #0003;
+}

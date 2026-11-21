@@ -2,7 +2,7 @@ from datetime import timedelta
 from secrets import token_urlsafe
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import delete, func, select
 
@@ -20,7 +20,7 @@ from .passwords import hasher, verify_password
 from .rate_limit import limit_attempt
 from .schemas import (
     AccessResponse, AccountChange, AdminSessionView, AdminUnlockResponse, AuthAuditView, ChangePassword,
-    Login, Profile, ProfileUpdate, Registration, RoleChange, SetAdminPassword, Unlock,
+    Login, Profile, ProfileUpdate, Registration, RoleChange, SetAdminPassword, Unlock, UserLookup,
 )
 from .tokens import issue_token
 
@@ -199,6 +199,21 @@ def suspend(user_id: UUID, data: AccountChange, principal: SuperAdminWrite, db: 
 @admin.post("/users/{user_id}/restore", response_model=Profile)
 def restore(user_id: UUID, data: AccountChange, principal: SuperAdminWrite, db: Db):
     return change_status(db, principal.user, user_id, AccountStatus.ACTIVE, data.reason)
+
+
+@admin.get("/user-search", response_model=list[UserLookup])
+def user_search(
+    _: Administrator, db: Db, q: str | None = Query(None, min_length=2, max_length=32), user_id: UUID | None = None,
+):
+    search = nickname_key(q.strip()) if q else ""
+    if user_id is None and (len(search) < 2 or "\x00" in search):
+        raise HTTPException(422)
+    query = select(User).where(User.role == Role.USER)
+    if user_id is not None:
+        query = query.where(User.id == user_id)
+    else:
+        query = query.where(User.status == AccountStatus.ACTIVE, User.nickname_key.startswith(search, autoescape=True))
+    return list(db.scalars(query.order_by(User.nickname_key, User.id).limit(20)))
 
 
 @admin.get("/audit", response_model=list[AuthAuditView])

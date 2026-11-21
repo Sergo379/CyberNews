@@ -1,6 +1,7 @@
 import unicodedata
 from datetime import datetime
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, StringConstraints, field_validator, model_validator
 
@@ -87,6 +88,13 @@ class AccessResponse(BaseModel):
     expires_in: int
 
 
+class UserLookup(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    nickname: str
+
+
 class AdminSessionView(BaseModel):
     expires_at: datetime
 
@@ -98,3 +106,4 @@ class AdminUnlockResponse(AdminSessionView):
 class AuthAuditView(AuditView):
     previous_role: Role | None
     new_role: Role | None
+from uuid import UUID

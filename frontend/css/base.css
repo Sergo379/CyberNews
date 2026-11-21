@@ -1,0 +1,46 @@
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { min-width: 0; scroll-padding-top: 5.5rem; }
+body {
+  margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink); font: 1rem/1.55 var(--font);
+  overflow-wrap: anywhere;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button, select, input[type="checkbox"] { cursor: pointer; }
+button { -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: wait; opacity: .62; }
+a { color: var(--accent); text-underline-offset: .22em; }
+a:hover { text-decoration-thickness: .13em; }
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: .18rem solid var(--focus); outline-offset: .18rem;
+}
+::selection { background: var(--tint); color: var(--ink); }
+h1, h2, h3, p, figure, dl, blockquote, pre { margin: 0; }
+h1, h2, h3 { line-height: 1.15; letter-spacing: -.025em; }
+h1 { font-size: clamp(2.15rem, 4.8vw, 4.15rem); font-weight: 760; }
+h2 { font-size: clamp(1.45rem, 2.4vw, 2rem); font-weight: 740; }
+h3 { font-size: 1.25rem; font-weight: 700; }
+p + p { margin-top: .65rem; }
+img { display: block; max-width: 100%; height: auto; }
+svg { display: inline-block; vertical-align: middle; flex: none; }
+summary { cursor: pointer; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 1rem 0; }
+time, .numeric { font-variant-numeric: tabular-nums; }
+.skip {
+  position: fixed; z-index: 12; top: .5rem; left: .5rem; transform: translateY(-180%);
+  padding: .6rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.skip:focus { transform: none; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.muted { color: var(--muted); }
+.small { font-size: .875rem; }
+.stack, .field-stack { display: grid; gap: 1rem; min-width: 0; }
+.cluster { display: flex; gap: .55rem; align-items: center; flex-wrap: wrap; min-width: 0; }
+.cluster-wide { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; min-width: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}

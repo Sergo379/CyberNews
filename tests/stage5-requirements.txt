@@ -1,0 +1,2 @@
+-r stage3-requirements.txt
+playwright==1.65.2

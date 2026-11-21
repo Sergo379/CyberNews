@@ -31,6 +31,7 @@ Guest — состояние без авторизации. Публичная �
 | `POST /admin/unlock` | Bearer администратора. Принимает `admin_password`, возвращает `admin_session` и `expires_at` |
 | `GET /admin/session`, `POST /admin/lock` | Bearer и `X-Admin-Session`. Проверяют или закрывают текущую административную сессию |
 | `GET /admin/users` | Super Admin. Возвращает список пользователей. Пагинация `limit` и `offset` |
+| `GET /admin/user-search` | Moderator и Super Admin с действующей административной сессией. Параметр `q` ищет активных обычных пользователей по началу никнейма. Параметр `user_id` проверяет конкретный UUID обычного пользователя для модерации его комментария. Возвращает до 20 пар `id` и `nickname` |
 | `PATCH /admin/users/{user_id}/role` | Super Admin. Принимает `role` и необязательную `reason`. Целевой пользователь после изменения роли входит заново |
 | `POST /admin/users/{user_id}/suspend`, `POST /admin/users/{user_id}/restore` | Super Admin. Принимают `reason`. Восстановленный User входит заново |
 | `GET /admin/audit` | Административная сессия. Возвращает записи аудита с пагинацией |

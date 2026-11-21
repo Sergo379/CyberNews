@@ -1,0 +1,30 @@
+.admin-topline { display: flex; gap: .5rem; align-items: center; margin-bottom: .52rem; }
+.admin-topline .pill { font-size: .78rem; }
+.admin-grid { display: grid; grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr); align-items: start; gap: 1.15rem; }
+.admin-sidebar { position: sticky; top: 5.2rem; }
+.admin-sidebar .panel { padding: .66rem; }
+.sidebar-nav { display: grid; gap: .13rem; }
+.sidebar-nav a { display: flex; gap: .55rem; align-items: center; min-height: var(--control); }
+.admin-work { min-width: 0; display: grid; gap: .85rem; align-content: start; }
+.admin-work h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); }
+.admin-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: .64rem; }
+.stat-card { display: grid; gap: .4rem; align-content: start; }
+.stat-card strong { font-size: 2rem; line-height: 1; letter-spacing: -.055em; }
+.admin-tools { align-items: end; }
+.admin-tools .field { min-width: min(100%, 11rem); flex: 1; }
+.admin-tools .button { flex: none; }
+.admin-table { min-width: 38rem; }
+.admin-table .pill { white-space: nowrap; }
+.admin-table code { overflow-wrap: anywhere; }
+.admin-actions { white-space: normal; gap: .25rem; }
+.editor { font: .95rem/1.5 ui-monospace, Consolas, monospace; min-height: 12rem; }
+.audit-list { display: grid; gap: .62rem; }
+.audit-entry { border-top: 1px solid var(--line); padding-block: .6rem; }
+.rss-row .meta-line { gap: .35rem .72rem; }
+@media (max-width: 51rem) {
+  .admin-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-sidebar { position: static; }
+  .sidebar-nav { display: flex; flex-wrap: wrap; gap: .17rem; }
+  .sidebar-nav a { padding: .4rem .56rem; font-size: .82rem; min-height: 2.43rem; }
+  .sidebar-nav .icon { width: 1rem; height: 1rem; }
+}

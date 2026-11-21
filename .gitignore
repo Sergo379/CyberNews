@@ -11,6 +11,7 @@ secrets/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.test-artifacts/
 .coverage
 .DS_Store
 Thumbs.db
