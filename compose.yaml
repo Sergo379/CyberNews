@@ -1,0 +1,166 @@
+name: cybernews
+
+x-backend: &backend
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/ready', timeout=7).close()"]
+    interval: 10s
+    timeout: 8s
+    retries: 5
+    start_period: 10s
+
+x-backend-environment: &backend-environment
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-build-contexts: &build-contexts
+  runtime: ./services/runtime
+
+services:
+  auth:
+    <<: *backend
+    build:
+      context: ./services/auth
+      additional_contexts: *build-contexts
+    environment:
+      <<: *backend-environment
+      SERVICE_NAME: auth
+      DB_NAME: auth_db
+      DB_USER: auth_svc
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:?Run scripts/init-env.ps1 or set AUTH_DB_PASSWORD}
+
+  collector:
+    <<: *backend
+    build:
+      context: ./services/collector
+      additional_contexts: *build-contexts
+    environment:
+      <<: *backend-environment
+      SERVICE_NAME: collector
+      DB_NAME: collector_db
+      DB_USER: collector_svc
+      DB_PASSWORD: ${COLLECTOR_DB_PASSWORD:?Run scripts/init-env.ps1 or set COLLECTOR_DB_PASSWORD}
+
+  articles:
+    <<: *backend
+    build:
+      context: ./services/articles
+      additional_contexts: *build-contexts
+    environment:
+      <<: *backend-environment
+      SERVICE_NAME: articles
+      DB_NAME: article_db
+      DB_USER: article_svc
+      DB_PASSWORD: ${ARTICLE_DB_PASSWORD:?Run scripts/init-env.ps1 or set ARTICLE_DB_PASSWORD}
+
+  community:
+    <<: *backend
+    build:
+      context: ./services/community
+      additional_contexts: *build-contexts
+    environment:
+      <<: *backend-environment
+      SERVICE_NAME: community
+      DB_NAME: community_db
+      DB_USER: community_svc
+      DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:?Run scripts/init-env.ps1 or set COMMUNITY_DB_PASSWORD}
+
+  moderation:
+    <<: *backend
+    build:
+      context: ./services/moderation
+      additional_contexts: *build-contexts
+    environment:
+      <<: *backend-environment
+      SERVICE_NAME: moderation
+      DB_NAME: moderation_db
+      DB_USER: moderation_svc
+      DB_PASSWORD: ${MODERATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set MODERATION_DB_PASSWORD}
+
+  notifications:
+    <<: *backend
+    build:
+      context: ./services/notifications
+      additional_contexts: *build-contexts
+    environment:
+      <<: *backend-environment
+      SERVICE_NAME: notifications
+      DB_NAME: notification_db
+      DB_USER: notification_svc
+      DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set NOTIFICATION_DB_PASSWORD}
+
+  postgres:
+    image: postgres:17.12-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-cybernews_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init-env.ps1 or set POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --auth-host=scram-sha-256
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?Run scripts/init-env.ps1 or set AUTH_DB_PASSWORD}
+      COLLECTOR_DB_PASSWORD: ${COLLECTOR_DB_PASSWORD:?Run scripts/init-env.ps1 or set COLLECTOR_DB_PASSWORD}
+      ARTICLE_DB_PASSWORD: ${ARTICLE_DB_PASSWORD:?Run scripts/init-env.ps1 or set ARTICLE_DB_PASSWORD}
+      COMMUNITY_DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:?Run scripts/init-env.ps1 or set COMMUNITY_DB_PASSWORD}
+      MODERATION_DB_PASSWORD: ${MODERATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set MODERATION_DB_PASSWORD}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set NOTIFICATION_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/10-initialize.sh:/docker-entrypoint-initdb.d/10-initialize.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d postgres"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 15s
+
+  rabbitmq:
+    image: rabbitmq:4.3.8-management
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-cybernews}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Run scripts/init-env.ps1 or set RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-cybernews}
+    ports:
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/30-cybernews.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity"]
+      interval: 15s
+      timeout: 12s
+      retries: 5
+      start_period: 30s
+
+  gateway:
+    image: nginx:1.30.7-alpine
+    restart: unless-stopped
+    environment:
+      NGINX_ENVSUBST_FILTER: _UPSTREAM$
+      AUTH_UPSTREAM: ${AUTH_UPSTREAM:-auth:8000}
+      COLLECTOR_UPSTREAM: ${COLLECTOR_UPSTREAM:-collector:8000}
+      ARTICLES_UPSTREAM: ${ARTICLES_UPSTREAM:-articles:8000}
+      COMMUNITY_UPSTREAM: ${COMMUNITY_UPSTREAM:-community:8000}
+      MODERATION_UPSTREAM: ${MODERATION_UPSTREAM:-moderation:8000}
+      NOTIFICATIONS_UPSTREAM: ${NOTIFICATIONS_UPSTREAM:-notifications:8000}
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+    volumes:
+      - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
