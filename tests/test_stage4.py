@@ -17,6 +17,7 @@ COMMUNITY = "/api/v1/community"
 MOD = "/api/v1/moderation"
 NOTIFY = "/api/v1/notifications"
 COLLECTOR = "/api/v1/collector"
+BACKENDS = (AUTH, COLLECTOR, NEWS, COMMUNITY, MOD, NOTIFY)
 
 
 def expect(response, code):
@@ -270,6 +271,7 @@ def test_moderation_outage_fails_closed_but_deletion_works(client, article, memb
         expect(client.delete(comment_detail(row), headers=headers), 204)
     finally:
         compose("up", "-d", "--wait", "--wait-timeout", "60", "moderation")
+    expect(post_comment(client, headers, article, "After Moderation recovered"), 201)
 
 
 def test_article_outage_fails_closed(client, article, member):
@@ -283,6 +285,7 @@ def test_article_outage_fails_closed(client, article, member):
         }), 503)
     finally:
         compose("up", "-d", "--wait", "--wait-timeout", "60", "articles")
+    assert expect(client.get(comment_url(article)), 200)["total"] == 0
 
 
 def test_account_comment_rate_limit(client, article, member):
@@ -662,3 +665,30 @@ def test_comment_bookmark_and_notification_persist_after_restart(client, member,
     assert expect(client.get(f"{COMMUNITY}/bookmarks", headers=user), 200)[0]["article_id"] == story["id"]
     restored = for_article(client, user, story["id"])
     assert restored["id"] == note["id"] and restored["read"]
+
+
+def test_postgres_outage_preserves_liveness_and_catalog(client, article):
+    story = expect(client.get(f"{NEWS}/{article['id']}"), 200)
+    compose("stop", "postgres")
+    try:
+        for prefix in BACKENDS:
+            expect(client.get(f"{prefix}/health"), 200)
+            expect(client.get(f"{prefix}/ready"), 503)
+    finally:
+        compose("up", "-d", "--wait", "--wait-timeout", "100", "postgres")
+    wait_for(lambda: all(client.get(f"{prefix}/ready").status_code == 200 for prefix in BACKENDS))
+    assert expect(client.get(f"{NEWS}/{article['id']}"), 200) == story
+
+
+def test_database_isolation_and_idempotent_migrations(client, article):
+    compose("cp", "tests/postgres-smoke.sh", "postgres:/tmp/lab2-postgres-smoke.sh")
+    result = compose("exec", "-T", "postgres", "bash", "-c",
+                     r"tr -d '\015' </tmp/lab2-postgres-smoke.sh | bash -s -- isolation smoke_00000000000000000000000000000000")
+    assert result.count("(UTF-8, isolated)") == len(BACKENDS)
+    story = expect(client.get(f"{NEWS}/{article['id']}"), 200)
+    for prefix in BACKENDS:
+        service = prefix.rsplit("/", 1)[-1]
+        compose("exec", "-T", service, "alembic", "upgrade", "head")
+        assert "(head)" in compose("exec", "-T", service, "alembic", "current", "--check-heads")
+        assert "No new upgrade operations detected" in compose("exec", "-T", service, "alembic", "check")
+    assert expect(client.get(f"{NEWS}/{article['id']}"), 200) == story

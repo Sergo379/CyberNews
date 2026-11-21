@@ -160,6 +160,7 @@ def test_pagination_search_filters_sort_and_missing(client, admin, startup):
         "published_from": "2026-11-09T08:00:00Z", "published_to": "2026-11-09T09:00:00Z",
     }), 200)
     assert page["total"] == 1 and page["items"][0]["title"].startswith("Acorn")
+    expect(client.get(f"{ARTICLES}/not-a-uuid"), 422)
     expect(client.get(f"{ARTICLES}/{uuid4()}"), 404)
     assert len(expect(client.get(f"{ARTICLES}/categories"), 200)) == 7
     assert sum(item["count"] for item in expect(client.get(f"{ARTICLES}/sources"), 200)) == 3

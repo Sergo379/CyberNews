@@ -2,6 +2,8 @@
 
 CyberNews — микросервисный новостной портал по информационной безопасности. Публичный сайт и административная панель используют RSS-каталог, авторизацию, комментарии, реакции, избранное, модерацию и уведомления о новых публикациях.
 
+**[Лабораторная работа №2 · полный комплект для защиты](lab2/README.md)** · [Сценарий демонстрации](lab2/DEMO.md) · [Результаты проверок](lab2/EVIDENCE.md).
+
 В проекте используются Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, psycopg 3, PostgreSQL 17, RabbitMQ 4.3 с Management UI, Nginx и Docker Compose.
 
 ## Запуск в Windows 11
@@ -18,6 +20,8 @@ docker compose ps
 ```
 
 `init-env.ps1` создаёт локальный `.env` из `.env.example`. При обновлении стенда скрипт добавляет недостающие секреты межсервисных API и сохраняет существующие ключи и пароли. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все опубликованные порты привязаны к `127.0.0.1`.
+
+Compose предназначен для локального запуска по HTTP. Перед публичным размещением понадобятся TLS, управление секретами, резервное копирование и операционное сопровождение.
 
 ## Веб-интерфейс
 
@@ -85,12 +89,13 @@ docker compose exec -T notifications alembic current
 Invoke-RestMethod http://localhost:8080/health
 Invoke-RestMethod http://localhost:8080/api/v1/auth/health
 Invoke-RestMethod http://localhost:8080/api/v1/auth/ready
-.\scripts\smoke-test.ps1
+.\scripts\verify-lab2.ps1
+.\scripts\smoke-test.ps1 -SecretsOnly
 ```
 
 Под `/api/v1/{service}/` доступны `health`, `ready`, `openapi.json` и `docs`. Подставьте `auth`, `collector`, `articles`, `community`, `moderation` или `notifications`. `/health` проверяет ответ процесса, `/ready` выполняет запрос к его базе PostgreSQL. Moderation дополнительно проверяет готовность Auth, Notifications — подключение к RabbitMQ. Если проверяемая зависимость недоступна, `/ready` возвращает `503`. Запросы можно сопоставить с JSON-логами по заголовку `X-Request-ID`.
 
-Smoke-тест проверяет привязки портов, Git, все сервисы через Gateway, разграничение прав PostgreSQL и RabbitMQ. Он кратковременно останавливает PostgreSQL проекта и перезапускает RabbitMQ проекта, проверяет сохранность временной записи и очереди и затем удаляет их. Выполняйте его в локальном стеке без параллельных инфраструктурных операций.
+`verify-lab2.ps1` проверяет конфигурацию, девять контейнеров, привязки портов, HTTP, Swagger/OpenAPI, корреляцию логов, ревизии Alembic, роли PostgreSQL и доступность RabbitMQ в режиме чтения. `smoke-test.ps1 -SecretsOnly` проверяет Git без инфраструктурных операций. Сценарии остановки PostgreSQL и перезапуска RabbitMQ входят в `smoke-test-stage4.ps1` и выполняются в отдельном проекте. Исторический `smoke-test.ps1` без ключа останавливает зависимости активного проекта.
 
 Тесты второго этапа запускаются на отдельном стенде с временным PostgreSQL, отдельными секретами и динамическим портом Gateway. Понадобится Compose 2.24.4+ для тестовой конфигурации. Скрипт завершает работу тестовых контейнеров в блоке `finally`, сохраняя рабочие контейнеры и тома проекта.
 

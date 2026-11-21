@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$DockerExe = 'docker'
+    [string]$DockerExe = 'docker',
+    [switch]$SecretsOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -118,6 +119,7 @@ Push-Location $root
 try {
     $config = (Invoke-Compose config --format json | Out-String) | ConvertFrom-Json
     Test-GitSecrets $config
+    if ($SecretsOnly) { return }
 
     $expectedPorts = @{ gateway = 8080; postgres = 5432; rabbitmq = 15672 }
     $published = @{}

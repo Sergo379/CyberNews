@@ -32,12 +32,28 @@ check_database() {
 }
 
 if [[ $phase == isolation ]]; then
+    export PGOPTIONS='-c default_transaction_read_only=on'
     check_database auth_svc auth_db AUTH_DB_PASSWORD
     check_database collector_svc collector_db COLLECTOR_DB_PASSWORD
     check_database article_svc article_db ARTICLE_DB_PASSWORD
     check_database community_svc community_db COMMUNITY_DB_PASSWORD
     check_database moderation_svc moderation_db MODERATION_DB_PASSWORD
     check_database notification_svc notification_db NOTIFICATION_DB_PASSWORD
+    exit 0
+fi
+
+if [[ $phase == snapshot ]]; then
+    export PGOPTIONS='-c default_transaction_read_only=on'
+    export PGUSER="$POSTGRES_USER" PGPASSWORD="$POSTGRES_PASSWORD"
+    for pair in auth_db:users article_db:articles collector_db:rss_sources community_db:comments \
+        notification_db:subscriptions notification_db:notifications; do
+        database=${pair%:*}
+        table=${pair#*:}
+        filter=''
+        if [[ $table == articles ]]; then filter=" WHERE status = 'published'"; fi
+        count=$(query --dbname "$database" --command "SELECT count(*) FROM $table$filter;")
+        printf '%s %s\n' "$table" "$count"
+    done
     exit 0
 fi
 

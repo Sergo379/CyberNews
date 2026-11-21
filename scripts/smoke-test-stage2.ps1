@@ -145,8 +145,10 @@ try {
     try {
         Call-Api -Method Get -Path 'moderation/comment-permission' -Headers $member -Expected 503
     } finally {
-        Invoke-TestCompose start auth
+        Invoke-TestCompose up -d --wait --wait-timeout 60 auth
     }
+    $permission = Call-Api -Method Get -Path 'moderation/comment-permission' -Headers $member
+    if ($permission.allowed -ne $true) { throw 'Moderation did not recover after Auth restarted.' }
     Write-Host 'PASS: Stage 2 Gateway smoke, restart persistence and Auth dependency failure.'
 } finally {
     try {

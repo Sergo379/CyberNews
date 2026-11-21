@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$PythonExe = 'python',
-    [string]$DockerExe = 'docker'
+    [string]$DockerExe = 'docker',
+    [switch]$Demo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,7 +28,7 @@ $override = @{
     RABBITMQ_USER = 'cybernews_test_broker'
     RABBITMQ_VHOST = 'cybernews-stage4'
     ACCESS_TOKEN_TTL_SECONDS = '900'
-    ADMIN_SESSION_TTL_SECONDS = '300'
+    ADMIN_SESSION_TTL_SECONDS = $(if ($Demo) { '900' } else { '300' })
     CYBERNEWS_TEST_PROJECT = $project
     CYBERNEWS_TEST_DOCKER = $DockerExe
     CYBERNEWS_TEST_SUPER_EMAIL = 'stage5-admin@example.com'
@@ -56,6 +57,14 @@ try {
     $address = (Invoke-TestCompose port gateway 8080 | Out-String).Trim()
     if ($address -notmatch '^127\.0\.0\.1:[0-9]+$') { throw 'Unexpected test Gateway bind address.' }
     $env:CYBERNEWS_TEST_BASE_URL = "http://$address"
+    if ($Demo) {
+        Write-Host "Isolated demo: $env:CYBERNEWS_TEST_BASE_URL ($project)"
+        Write-Host 'Create a temporary Super Admin. Use only test credentials in this terminal.'
+        Invoke-TestCompose exec auth python -m app.bootstrap
+        Write-Host "Demo: $env:CYBERNEWS_TEST_BASE_URL  |  Admin: $env:CYBERNEWS_TEST_BASE_URL/admin/"
+        $null = Read-Host 'Press Enter after the demonstration to stop this isolated stack'
+        return
+    }
     $data = @{
         email = $override.CYBERNEWS_TEST_SUPER_EMAIL
         nickname = 'stage5-root'

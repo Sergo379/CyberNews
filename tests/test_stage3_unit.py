@@ -81,6 +81,14 @@ def test_connection_failure_reported():
         fetcher(fail).fetch(URL)
 
 
+def test_rss_read_timeout_is_reported():
+    def fail(_):
+        raise httpx.ReadTimeout("fixture did not reply")
+
+    with pytest.raises(FeedError, match="feed_timeout"):
+        fetcher(fail).fetch(URL)
+
+
 @pytest.mark.parametrize("headers", [{}, {"Content-Length": "2049"}])
 def test_response_limit(headers):
     with pytest.raises(FeedError, match="feed_too_large"):
