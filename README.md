@@ -1,6 +1,6 @@
 # CyberNews
 
-CyberNews — микросервисный новостной портал по информационной безопасности. Работают автоматический RSS-сбор, публичный каталог статей, регистрация, авторизация, административные роли и модерация.
+CyberNews — микросервисный новостной портал по информационной безопасности. Работают RSS-сбор, каталог статей, авторизация, комментарии, реакции, избранное, модерация и внутренние уведомления о новых статьях.
 
 В проекте используются Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, psycopg 3, PostgreSQL 17, RabbitMQ 4.3 с Management UI, Nginx и Docker Compose.
 
@@ -17,7 +17,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-`init-env.ps1` создаёт локальный `.env` из `.env.example`. При обновлении стенда скрипт добавляет недостающие секреты JWT, Auth и импорта статей и сохраняет существующие ключи и пароли. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все опубликованные порты привязаны к `127.0.0.1`.
+`init-env.ps1` создаёт локальный `.env` из `.env.example`. При обновлении стенда скрипт добавляет недостающие секреты межсервисных API и сохраняет существующие ключи и пароли. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все опубликованные порты привязаны к `127.0.0.1`.
 
 ## RSS и каталог новостей
 
@@ -43,19 +43,31 @@ Swagger UI доступны для [Auth](http://localhost:8080/api/v1/auth/docs
 
 Матрица ролей, список маршрутов, примеры PowerShell для регистрации, назначения Moderator, работы с жалобами, блокирования и снятия ограничений приведены в [руководстве API](docs/AUTH_MODERATION_API.md).
 
+## Комментарии, избранное и уведомления
+
+Community проверяет опубликованную статью и разрешение комментировать, хранит реакции и личное избранное. Notifications поддерживает подписки на категории и доставляет внутренние уведомления о первой публикации через RabbitMQ. Операции модерации комментариев проходят через Moderation и сохраняются в аудите.
+
+- [Community Swagger](http://localhost:8080/api/v1/community/docs)
+- [Notifications Swagger](http://localhost:8080/api/v1/notifications/docs)
+- [Контракты API, RabbitMQ и примеры PowerShell](docs/COMMUNITY_NOTIFICATIONS_API.md)
+
 ## Миграции
 
-Контейнеры Auth, Moderation, Collector и Articles применяют свои миграции при запуске. Для ручного повторного запуска на поднятом стеке используйте следующие команды.
+Все шесть приложений применяют свои миграции при запуске. Для ручного повторного запуска на поднятом стеке используйте следующие команды.
 
 ```powershell
 docker compose exec -T auth alembic upgrade head
 docker compose exec -T moderation alembic upgrade head
 docker compose exec -T collector alembic upgrade head
 docker compose exec -T articles alembic upgrade head
+docker compose exec -T community alembic upgrade head
+docker compose exec -T notifications alembic upgrade head
 docker compose exec -T auth alembic current
 docker compose exec -T moderation alembic current
 docker compose exec -T collector alembic current
 docker compose exec -T articles alembic current
+docker compose exec -T community alembic current
+docker compose exec -T notifications alembic current
 ```
 
 ## Проверка API
@@ -67,7 +79,7 @@ Invoke-RestMethod http://localhost:8080/api/v1/auth/ready
 .\scripts\smoke-test.ps1
 ```
 
-Под `/api/v1/{service}/` доступны корневой диагностический ответ, `health`, `ready`, `openapi.json` и `docs`. Подставьте `auth`, `collector`, `articles`, `community`, `moderation` или `notifications`. `/health` проверяет ответ процесса, `/ready` выполняет запрос к его базе PostgreSQL. Moderation дополнительно проверяет готовность Auth. Если зависимость недоступна, `/ready` возвращает `503`. Запросы можно сопоставить с JSON-логами по заголовку `X-Request-ID`.
+Под `/api/v1/{service}/` доступны `health`, `ready`, `openapi.json` и `docs`. Подставьте `auth`, `collector`, `articles`, `community`, `moderation` или `notifications`. `/health` проверяет ответ процесса, `/ready` выполняет запрос к его базе PostgreSQL. Moderation дополнительно проверяет готовность Auth, Notifications — подключение к RabbitMQ. Если проверяемая зависимость недоступна, `/ready` возвращает `503`. Запросы можно сопоставить с JSON-логами по заголовку `X-Request-ID`.
 
 Smoke-тест проверяет привязки портов, Git, все сервисы через Gateway, разграничение прав PostgreSQL и RabbitMQ. Он кратковременно останавливает PostgreSQL проекта и перезапускает RabbitMQ проекта, проверяет сохранность временной записи и очереди и затем удаляет их. Выполняйте его в локальном стеке без параллельных инфраструктурных операций.
 
@@ -89,6 +101,12 @@ python -m venv .venv
 .\scripts\smoke-test-stage3.ps1 -PythonExe .\.venv\Scripts\python.exe
 ```
 
+Тесты четвёртого этапа используют изолированные PostgreSQL, RabbitMQ и Gateway. Тестовые аккаунты, статьи и события создаются в этом стенде.
+
+```powershell
+.\scripts\smoke-test-stage4.ps1 -PythonExe .\.venv\Scripts\python.exe
+```
+
 ## PostgreSQL и pgAdmin 4
 
 В pgAdmin выберите **Servers → Register → Server**. На вкладке **General** укажите имя подключения. На вкладке **Connection** используйте `127.0.0.1`, порт из `POSTGRES_PORT` (по умолчанию `5433`), базу обслуживания и пользователя из таблицы. Пароль возьмите из локального `.env`. Для административного входа используйте базу `postgres` и значения `POSTGRES_USER` и `POSTGRES_PASSWORD`.
@@ -104,7 +122,7 @@ python -m venv .venv
 
 ## RabbitMQ
 
-Откройте [RabbitMQ Management](http://localhost:15672/) и войдите с `RABBITMQ_USER` и `RABBITMQ_PASSWORD` из `.env`. Для будущих событий выделен виртуальный хост `cybernews`. AMQP доступен во внутренней сети Compose через `rabbitmq:5672`.
+Откройте RabbitMQ Management и войдите с `RABBITMQ_USER` и `RABBITMQ_PASSWORD` из `.env`. В vhost `cybernews` работают обменник `cybernews.events`, очередь уведомлений и очередь ошибок. AMQP доступен во внутренней сети Compose через `rabbitmq:5672`. [RabbitMQ Management](http://localhost:15672/)
 
 ## Независимый запуск сервиса
 

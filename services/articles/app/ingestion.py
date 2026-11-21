@@ -9,6 +9,7 @@ from cybernews_runtime.security import utc_now
 from .classification import classify
 from .content import clean_content, external_summary, plain_text
 from .models import Article, ArticleGuidKey, ArticleUrlKey, SourcePolicyRecord
+from .outbox import record_first_publication
 
 
 def catalog_lock(db):
@@ -67,6 +68,7 @@ def update_entry(db, batch, entry) -> str:
         )
         db.add(article)
         db.flush()
+        record_first_publication(db, article)
         outcome = "created"
     elif article.source_id == batch.source_id:
         fields = entry_fields(batch, entry)

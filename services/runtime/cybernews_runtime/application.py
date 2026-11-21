@@ -24,7 +24,7 @@ valid_request_id = re.compile(r"[a-zA-Z0-9._-]{1,128}")
 def create_application(
     title: str, settings: Settings, router: APIRouter, public_prefix: str,
     *, dependency_check: Callable[[], bool] | None = None, startup: Callable[[], None] | None = None,
-    shutdown: Callable[[], None] | None = None,
+    shutdown: Callable[[], None] | None = None, dependency_name: str = "auth",
 ) -> FastAPI:
     database = Database(settings.database_url)
 
@@ -130,7 +130,7 @@ def create_application(
             )
         if dependency_check is not None and not dependency_check():
             return JSONResponse(
-                {"service": settings.service_name, "status": "unavailable", "database": "ok", "auth": "unavailable"},
+                {"service": settings.service_name, "status": "unavailable", "database": "ok", dependency_name: "unavailable"},
                 status_code=503,
             )
         return {"service": settings.service_name, "status": "ready", "database": "ok"}

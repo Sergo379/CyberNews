@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import CheckConstraint, DateTime, Index, String, Text, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from cybernews_runtime.audit import AuditFields
@@ -58,3 +59,25 @@ class Report(Base):
 
 class ModerationAudit(AuditFields, Base):
     __tablename__ = "moderation_audit"
+
+
+class CommentCommand(Base):
+    __tablename__ = "comment_moderation_commands"
+    __table_args__ = (
+        CheckConstraint("action IN ('hide','restore')", name="ck_comment_commands_action"),
+        CheckConstraint("state IN ('pending','completed','rejected')", name="ck_comment_commands_state"),
+        Index("ix_comment_commands_pending", "next_attempt_at", "id", postgresql_where=text("state = 'pending'")),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    comment_id: Mapped[UUID]
+    actor_id: Mapped[UUID]
+    actor_role: Mapped[str] = mapped_column(String(16))
+    action: Mapped[str] = mapped_column(String(8))
+    reason: Mapped[str] = mapped_column(Text)
+    request_id: Mapped[str] = mapped_column(String(128))
+    state: Mapped[str] = mapped_column(String(12), server_default="pending")
+    error_status: Mapped[int | None]
+    result: Mapped[dict | None] = mapped_column(JSONB)
+    attempts: Mapped[int] = mapped_column(default=0, server_default="0")
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

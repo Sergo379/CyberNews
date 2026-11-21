@@ -77,6 +77,7 @@ class Article(Base):
     previous_status: Mapped[str | None] = mapped_column(String(12))
     image_url: Mapped[str | None] = mapped_column(Text)
     edited: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    ever_published: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
     search_document: Mapped[str] = mapped_column(
         TSVECTOR, Computed("to_tsvector('simple'::regconfig, title || ' ' || coalesce(summary, ''))", persisted=True),
     )
@@ -99,3 +100,20 @@ class ArticleGuidKey(Base):
 
 class ArticleAudit(AuditFields, Base):
     __tablename__ = "article_audit"
+
+
+class ArticleOutbox(Base):
+    __tablename__ = "article_outbox"
+    __table_args__ = (
+        Index("ix_article_outbox_pending", "next_attempt_at", "event_id", postgresql_where=text("delivered_at IS NULL")),
+    )
+
+    event_id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    article_id: Mapped[UUID] = mapped_column(ForeignKey("articles.id"), unique=True)
+    category: Mapped[str] = mapped_column(ForeignKey("categories.id"))
+    source_id: Mapped[UUID | None]
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(default=0, server_default="0")

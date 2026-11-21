@@ -89,11 +89,13 @@ function Test-GitSecrets($ComposeConfig) {
     $secretValues += $ComposeConfig.services.auth.environment.JWT_SECRET
     $secretValues += $ComposeConfig.services.auth.environment.INTERNAL_AUTH_SECRET
     $secretValues += $ComposeConfig.services.articles.environment.ARTICLE_IMPORT_SECRET
-    Test-Assert ($secretValues.Count -eq 11) 'Unexpected number of infrastructure and application secrets.'
+    $secretValues += $ComposeConfig.services.articles.environment.ARTICLE_READ_SECRET
+    $secretValues += $ComposeConfig.services.community.environment.COMMUNITY_MODERATION_SECRET
+    Test-Assert ($secretValues.Count -eq 13) 'Unexpected number of infrastructure and application secrets.'
     foreach ($value in $secretValues) {
         Test-Assert ($value.Length -ge 16) 'An infrastructure password is too short for this stack.'
     }
-    Test-Assert (@($secretValues | Sort-Object -Unique).Count -eq 11) 'Secrets must be distinct.'
+    Test-Assert (@($secretValues | Sort-Object -Unique).Count -eq 13) 'Secrets must be distinct.'
     $trackedSecrets = @($secretValues | & git grep --cached -l -F -f -)
     $grepStatus = $LASTEXITCODE
     Test-Assert ($grepStatus -eq 1 -and $trackedSecrets.Count -eq 0) 'Git index secret scan failed.'

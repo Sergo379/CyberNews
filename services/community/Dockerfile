@@ -14,7 +14,9 @@ RUN pip install --only-binary=:all: -r requirements.txt \
 
 COPY --from=runtime /cybernews_runtime ./cybernews_runtime
 COPY app ./app
+COPY alembic.ini .
+COPY alembic ./alembic
 
 USER 10001:10001
 EXPOSE 8000
-CMD ["python", "-m", "cybernews_runtime"]
+CMD ["python", "-m", "cybernews_runtime", "--migrate"]

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from cybernews_runtime.news import ArticleStatus, Content, ContentMode, Input, Instant, Label, Language, Summary, Title, WebUrl
 
@@ -91,3 +91,7 @@ class SourceView(BaseModel):
     name: str
     url: str | None
     count: int
+
+
+class AvailabilityRequest(Input):
+    ids: list[UUID] = Field(min_length=1, max_length=100)

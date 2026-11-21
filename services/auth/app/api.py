@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import delete, func, select
 
 from cybernews_runtime.audit import Limit, Offset, add_event, audit_query
-from cybernews_runtime.contracts import AccountIdentity
+from cybernews_runtime.contracts import AccountIdentity, PrincipalIdentity
 from cybernews_runtime.security import (
     AccountStatus, AdminHeader, Db, Role, require_service_key, utc_now,
 )
@@ -207,7 +207,7 @@ def audit(principal: Administrator, db: Db, limit: Limit = 50, offset: Offset = 
     return list(db.scalars(audit_query(AuthAudit, actor_id, limit, offset)))
 
 
-@internal.get("/principal", response_model=AccountIdentity)
+@internal.get("/principal", response_model=PrincipalIdentity)
 def internal_principal(request: Request, db: Db, require_admin: bool = False):
     require_service_key(request, internal_key)
     scheme, _, credential = request.headers.get("Authorization", "").partition(" ")
@@ -216,7 +216,7 @@ def internal_principal(request: Request, db: Db, require_admin: bool = False):
     principal = get_principal(db, HTTPAuthorizationCredentials(scheme=scheme, credentials=credential))
     if require_admin:
         require_admin_session(db, principal, request.headers.get("X-Admin-Session"))
-    return AccountIdentity.model_validate(principal.user, from_attributes=True)
+    return PrincipalIdentity.model_validate(principal.user, from_attributes=True)
 
 
 @internal.get("/users/{user_id}", response_model=AccountIdentity)

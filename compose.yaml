@@ -20,6 +20,12 @@ x-backend-environment: &backend-environment
 x-build-contexts: &build-contexts
   runtime: ./services/runtime
 
+x-broker-environment: &broker-environment
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_USER: ${RABBITMQ_USER:-cybernews}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Run scripts/init-env.ps1}
+  RABBITMQ_VHOST: ${RABBITMQ_VHOST:-cybernews}
+
 services:
   auth:
     <<: *backend
@@ -66,17 +72,19 @@ services:
 
   articles:
     <<: *backend
+    stop_grace_period: 25s
     build:
       context: ./services/articles
       additional_contexts: *build-contexts
     environment:
-      <<: *backend-environment
+      <<: [*backend-environment, *broker-environment]
       SERVICE_NAME: articles
       DB_NAME: article_db
       DB_USER: article_svc
       DB_PASSWORD: ${ARTICLE_DB_PASSWORD:?Run scripts/init-env.ps1 or set ARTICLE_DB_PASSWORD}
       INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1}
       ARTICLE_IMPORT_SECRET: ${ARTICLE_IMPORT_SECRET:?Run scripts/init-env.ps1}
+      ARTICLE_READ_SECRET: ${ARTICLE_READ_SECRET:?Run scripts/init-env.ps1}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
 
   community:
@@ -90,9 +98,16 @@ services:
       DB_NAME: community_db
       DB_USER: community_svc
       DB_PASSWORD: ${COMMUNITY_DB_PASSWORD:?Run scripts/init-env.ps1 or set COMMUNITY_DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1}
+      ARTICLE_READ_SECRET: ${ARTICLE_READ_SECRET:?Run scripts/init-env.ps1}
+      COMMUNITY_MODERATION_SECRET: ${COMMUNITY_MODERATION_SECRET:?Run scripts/init-env.ps1}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
+      ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_URL:-http://articles:8000}
+      MODERATION_SERVICE_URL: ${MODERATION_SERVICE_URL:-http://moderation:8000}
 
   moderation:
     <<: *backend
+    stop_grace_period: 20s
     build:
       context: ./services/moderation
       additional_contexts: *build-contexts
@@ -104,18 +119,27 @@ services:
       DB_PASSWORD: ${MODERATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set MODERATION_DB_PASSWORD}
       INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1 to configure INTERNAL_AUTH_SECRET}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
+      ARTICLE_READ_SECRET: ${ARTICLE_READ_SECRET:?Run scripts/init-env.ps1}
+      COMMUNITY_MODERATION_SECRET: ${COMMUNITY_MODERATION_SECRET:?Run scripts/init-env.ps1}
+      ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_URL:-http://articles:8000}
+      COMMUNITY_SERVICE_URL: ${COMMUNITY_SERVICE_URL:-http://community:8000}
 
   notifications:
     <<: *backend
+    stop_grace_period: 25s
     build:
       context: ./services/notifications
       additional_contexts: *build-contexts
     environment:
-      <<: *backend-environment
+      <<: [*backend-environment, *broker-environment]
       SERVICE_NAME: notifications
       DB_NAME: notification_db
       DB_USER: notification_svc
       DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set NOTIFICATION_DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1}
+      ARTICLE_READ_SECRET: ${ARTICLE_READ_SECRET:?Run scripts/init-env.ps1}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
+      ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_URL:-http://articles:8000}
 
   postgres:
     image: postgres:17.12-bookworm

@@ -1,6 +1,16 @@
 services:
   auth:
     image: cybernews-stage2-auth:test
+  articles:
+    image: cybernews-stage2-articles:test
+    environment:
+      AUTH_SERVICE_URL: http://auth:8000
+  community:
+    image: cybernews-stage2-community:test
+    environment:
+      AUTH_SERVICE_URL: http://auth:8000
+      ARTICLE_SERVICE_URL: http://articles:8000
+      MODERATION_SERVICE_URL: http://moderation:8000
   postgres:
     ports: !reset []
     volumes: !override
@@ -15,7 +25,11 @@ services:
     environment:
       AUTH_UPSTREAM: auth:8000
       MODERATION_UPSTREAM: moderation:8000
+      ARTICLES_UPSTREAM: articles:8000
+      COMMUNITY_UPSTREAM: community:8000
   moderation:
     image: cybernews-stage2-moderation:test
     environment:
       AUTH_SERVICE_URL: http://auth:8000
+      ARTICLE_SERVICE_URL: http://articles:8000
+      COMMUNITY_SERVICE_URL: http://community:8000

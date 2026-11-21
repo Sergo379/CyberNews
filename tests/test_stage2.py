@@ -356,10 +356,21 @@ def test_suspend_restore_invalidates_existing_access(client, member, moderator, 
 
 
 @pytest.mark.parametrize(("target_type", "status"), [("article", "reviewed"), ("comment", "rejected"), ("user", "reviewed")])
-def test_reports(client, member, moderator, target_type, status):
+def test_reports(client, member, moderator, super_admin, target_type, status):
     _, account, member_headers = member
     _, mod, admin = moderator
-    target = account["id"] if target_type == "user" else str(uuid4())
+    target = account["id"]
+    if target_type in {"article", "comment"}:
+        article = expect(client.post("/api/v1/articles/admin/articles", headers=super_admin, json={
+            "title": "Stage 2 report target", "content": "<p>Isolated report fixture.</p>", "status": "published",
+        }), 201)
+        target = article["id"]
+        if target_type == "comment":
+            comment = expect(client.post(
+                f"/api/v1/community/articles/{target}/comments", headers=member_headers,
+                json={"body": "Stage 2 comment fixture"},
+            ), 201)
+            target = comment["id"]
     expect(report(client, member_headers, target_type, target, status="reviewed"), 422)
     item = expect(report(client, member_headers, target_type, target, description="details"), 201)
     assert item["status"] == "pending" and item["author_id"] == account["id"]

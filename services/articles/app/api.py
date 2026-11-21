@@ -6,14 +6,16 @@ from sqlalchemy import func, literal_column, select
 
 from cybernews_runtime.admin_client import SuperAdmin
 from cybernews_runtime.audit import AuditView, Limit, Offset, add_event, audit_query
+from cybernews_runtime.contracts import ArticleReference
 from cybernews_runtime.news import ArticleStatus, ContentMode, FeedBatch, ImportCounts, Instant, VersionedPolicy
 from cybernews_runtime.security import Db, require_service_key, utc_now
 
-from .config import import_key
+from .config import article_read_key, import_key
 from .content import clean_content, external_summary, plain_text
 from .ingestion import apply_policy, catalog_lock, import_batch
 from .models import Article, ArticleAudit, Category, SourcePolicyRecord
-from .schemas import ArticlePage, ArticleView, CategoryId, CategoryView, EditorialUpdate, OriginalCreate, SearchText, SourceView
+from .outbox import record_first_publication
+from .schemas import ArticlePage, ArticleView, AvailabilityRequest, CategoryId, CategoryView, EditorialUpdate, OriginalCreate, SearchText, SourceView
 
 public = APIRouter(tags=["articles"])
 admin = APIRouter(prefix="/admin", tags=["article administration"])
@@ -112,6 +114,7 @@ def create_article(data: OriginalCreate, actor: SuperAdmin, db: Db):
     article = Article(**fields, source_name="CyberNews", content_mode=ContentMode.FULL, edited=True)
     db.add(article)
     db.flush()
+    record_first_publication(db, article)
     add_event(db, ArticleAudit, actor.id, "article_created", article.id)
     db.commit()
     return article
@@ -145,6 +148,7 @@ def edit_article(article_id: UUID, data: EditorialUpdate, actor: SuperAdmin, db:
         article.published_at = utc_now()
     article.edited = True
     article.updated_at = utc_now()
+    record_first_publication(db, article)
     add_event(db, ArticleAudit, actor.id, "article_edited", article.id)
     db.commit()
     return article
@@ -183,6 +187,28 @@ def audit(_: SuperAdmin, db: Db, limit: Limit = 50, offset: Offset = 0):
 
 def require_importer(request: Request) -> None:
     require_service_key(request, import_key)
+
+
+def require_reader(request: Request) -> None:
+    require_service_key(request, article_read_key)
+
+
+@internal.get("/articles/{article_id}", response_model=ArticleReference, dependencies=[Depends(require_reader)])
+def published_reference(article_id: UUID, db: Db):
+    result = db.execute(select(Article.id, Article.title).where(
+        Article.id == article_id, Article.status == ArticleStatus.PUBLISHED,
+    )).one_or_none()
+    if result is None:
+        raise HTTPException(404)
+    return ArticleReference(id=result.id, title=result.title)
+
+
+@internal.post("/articles/availability", response_model=list[ArticleReference], dependencies=[Depends(require_reader)])
+def article_availability(data: AvailabilityRequest, db: Db):
+    rows = db.execute(select(Article.id, Article.title).where(
+        Article.id.in_(data.ids), Article.status == ArticleStatus.PUBLISHED,
+    ))
+    return [ArticleReference(id=row.id, title=row.title) for row in rows]
 
 
 @internal.post("/import", response_model=ImportCounts, dependencies=[Depends(require_importer)])

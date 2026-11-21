@@ -3,7 +3,8 @@ $root = Split-Path $PSScriptRoot -Parent
 $envFile = Join-Path $root '.env'
 $exists = Test-Path -LiteralPath $envFile
 
-$secretKeys = @('JWT_SECRET', 'INTERNAL_AUTH_SECRET', 'ARTICLE_IMPORT_SECRET')
+$secretKeys = @('JWT_SECRET', 'INTERNAL_AUTH_SECRET', 'ARTICLE_IMPORT_SECRET',
+    'ARTICLE_READ_SECRET', 'COMMUNITY_MODERATION_SECRET')
 if ($exists) {
     $original = [IO.File]::ReadAllText($envFile)
     $template = $original

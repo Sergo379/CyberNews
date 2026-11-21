@@ -72,7 +72,8 @@ $override = @{
 }
 foreach ($key in @('POSTGRES_PASSWORD', 'AUTH_DB_PASSWORD', 'COLLECTOR_DB_PASSWORD', 'ARTICLE_DB_PASSWORD',
         'COMMUNITY_DB_PASSWORD', 'MODERATION_DB_PASSWORD', 'NOTIFICATION_DB_PASSWORD', 'RABBITMQ_PASSWORD',
-        'JWT_SECRET', 'INTERNAL_AUTH_SECRET')) {
+        'JWT_SECRET', 'INTERNAL_AUTH_SECRET', 'ARTICLE_IMPORT_SECRET', 'ARTICLE_READ_SECRET',
+        'COMMUNITY_MODERATION_SECRET')) {
     $override[$key] = New-Secret
 }
 $previous = @{}
@@ -86,7 +87,7 @@ try {
     $previous['CYBERNEWS_TEST_BASE_URL'] = $env:CYBERNEWS_TEST_BASE_URL
     & $DockerExe @compose config --quiet
     if ($LASTEXITCODE -ne 0) { throw 'Invalid test Compose configuration.' }
-    Invoke-TestCompose up -d --build --wait --wait-timeout 100 postgres auth moderation gateway
+    Invoke-TestCompose up -d --build --wait --wait-timeout 100 postgres auth moderation articles community gateway
 
     $address = (Invoke-TestCompose port gateway 8080 | Out-String).Trim()
     if ($address -notmatch '^127\.0\.0\.1:[0-9]+$') { throw 'Unexpected test Gateway bind address.' }
@@ -114,8 +115,11 @@ try {
         email = 'smoke-member@example.com'; nickname = 'smoke-member'; password = $password
     } -Expected 201
     $member = Login-Account $user.email $password
+    $article = Call-Api -Method Post -Path 'articles/admin/articles' -Headers $super -Body @{
+        title = 'Stage 2 report target'; content = '<p>Isolated report fixture.</p>'; status = 'published'
+    } -Expected 201
     $complaint = Call-Api -Method Post -Path 'moderation/reports' -Headers $member -Body @{
-        target_type = 'article'; target_id = [Guid]::NewGuid().ToString(); reason = 'Smoke report'
+        target_type = 'article'; target_id = $article.id; reason = 'Smoke report'
     } -Expected 201
     $null = Call-Api -Method Patch -Path "moderation/reports/$($complaint.id)" -Headers $super -Body @{ status = 'reviewed' }
     $restriction = Call-Api -Method Post -Path 'moderation/restrictions' -Headers $super -Body @{

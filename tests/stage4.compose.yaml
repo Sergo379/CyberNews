@@ -1,0 +1,29 @@
+services:
+  auth:
+    image: cybernews-stage4-auth:test
+  articles:
+    image: cybernews-stage4-articles:test
+  collector:
+    image: cybernews-stage4-collector:test
+  community:
+    image: cybernews-stage4-community:test
+  moderation:
+    image: cybernews-stage4-moderation:test
+  notifications:
+    image: cybernews-stage4-notifications:test
+    environment:
+      AUTH_SERVICE_URL: http://auth:8000
+      ARTICLE_SERVICE_URL: http://articles:8000
+
+  rabbitmq:
+    ports: !reset []
+    volumes: !override
+      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/30-cybernews.conf:ro
+    tmpfs:
+      - /var/lib/rabbitmq
+    environment:
+      RABBITMQ_MNESIA_BASE: /tmp/cybernews-stage4-mnesia
+
+  gateway:
+    environment:
+      NOTIFICATIONS_UPSTREAM: notifications:8000

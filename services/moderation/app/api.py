@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from cybernews_runtime.audit import AuditView, Limit, Offset, add_event, audit_query
+from cybernews_runtime.community import CommentTarget
 from cybernews_runtime.contracts import AccountIdentity
 from cybernews_runtime.security import AccountStatus, Db, Role, require_service_key, utc_now
 
@@ -96,9 +97,15 @@ def lift(restriction_id: UUID, data: RestrictionLift, actor: SuperAdmin, db: Db)
 
 
 @reports.post("", response_model=ReportView, status_code=201)
-def create_report(data: ReportCreate, actor: Active, auth: Auth, db: Db):
+def create_report(data: ReportCreate, actor: Active, auth: Auth, db: Db, request: Request):
     if data.target_type == TargetType.USER:
         auth.user(data.target_id)
+    elif data.target_type == TargetType.ARTICLE:
+        request.app.state.article_reader.published(data.target_id)
+    else:
+        request.app.state.community.model(
+            CommentTarget, "GET", f"/internal/v1/comments/{data.target_id}/target", expected_errors=(404,),
+        )
     report = Report(author_id=actor.id, **data.model_dump())
     db.add(report)
     db.commit()

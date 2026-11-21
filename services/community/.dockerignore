@@ -2,3 +2,9 @@
 !requirements.txt
 !app/
 !app/*.py
+!alembic.ini
+!alembic/
+!alembic/env.py
+!alembic/script.py.mako
+!alembic/versions/
+!alembic/versions/*.py
