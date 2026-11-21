@@ -1,0 +1,26 @@
+services:
+  auth:
+    image: cybernews-stage3-auth:test
+
+  articles:
+    image: cybernews-stage3-articles:test
+    environment:
+      AUTH_SERVICE_URL: http://auth:8000
+
+  collector:
+    image: cybernews-stage3-collector:test
+    environment:
+      AUTH_SERVICE_URL: http://auth:8000
+      ARTICLE_SERVICE_URL: http://articles:8000
+      RSS_AUTO_SYNC: "true"
+      RSS_SYNC_INTERVAL_SECONDS: "1800"
+      RSS_ALLOWED_HOSTS: "feeds.feedburner.com,www.bleepingcomputer.com,krebsonsecurity.com,rss-fixture.example"
+    volumes:
+      - ./tests:/stage3-tests:ro
+    command: ["python", "/stage3-tests/stage3_collector.py"]
+
+  gateway:
+    environment:
+      AUTH_UPSTREAM: auth:8000
+      ARTICLES_UPSTREAM: articles:8000
+      COLLECTOR_UPSTREAM: collector:8000

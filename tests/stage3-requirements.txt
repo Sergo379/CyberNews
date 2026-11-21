@@ -1,0 +1,9 @@
+-r stage2-requirements.txt
+annotated-types==0.8.0
+defusedxml==0.7.1
+feedparser==6.0.14
+feedparser-sgmllib==2.1.0
+nh3==0.3.8
+pydantic==2.14.4
+pydantic-core==2.50.5
+typing-inspection==0.4.5

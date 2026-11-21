@@ -23,18 +23,23 @@ valid_request_id = re.compile(r"[a-zA-Z0-9._-]{1,128}")
 
 def create_application(
     title: str, settings: Settings, router: APIRouter, public_prefix: str,
-    *, dependency_check: Callable[[], bool] | None = None, shutdown: Callable[[], None] | None = None,
+    *, dependency_check: Callable[[], bool] | None = None, startup: Callable[[], None] | None = None,
+    shutdown: Callable[[], None] | None = None,
 ) -> FastAPI:
     database = Database(settings.database_url)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         try:
+            if startup is not None:
+                startup()
             yield
         finally:
-            database.engine.dispose()
-            if shutdown is not None:
-                shutdown()
+            try:
+                if shutdown is not None:
+                    shutdown()
+            finally:
+                database.engine.dispose()
 
     app = FastAPI(
         title=title,

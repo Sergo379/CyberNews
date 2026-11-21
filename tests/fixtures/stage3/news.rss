@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Fixture news</title><link>https://rss-fixture.example/</link><description>Local test feed</description><language>en-US</language>
+    <item>
+      <title>Acorn vulnerability check</title>
+      <link>https://rss-fixture.example/story/acorn?variant=stable&amp;utm_source=feed</link>
+      <guid isPermaLink="false">fixture-acorn</guid>
+      <pubDate>Mon, 09 Nov 2026 11:30:00 +0300</pubDate>
+      <description>A short Acorn advisory for catalog tests.</description>
+      <content:encoded><![CDATA[<h2>Test Full Heading</h2><p>Test full article section.</p><script>unwantedScript()</script>]]></content:encoded>
+      <category>Vulnerabilities</category>
+      <media:thumbnail url="https://rss-fixture.example/images/acorn.jpg"/>
+    </item>
+    <item>
+      <title>Birch malware bulletin</title>
+      <link>https://rss-fixture.example/story/birch</link>
+      <guid isPermaLink="false">fixture-birch</guid>
+    </item>
+  </channel>
+</rss>

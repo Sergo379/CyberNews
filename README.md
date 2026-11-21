@@ -1,6 +1,6 @@
 # CyberNews
 
-CyberNews — микросервисный новостной портал по информационной безопасности. В текущем этапе работают регистрация, профили, авторизация, административные роли, жалобы и ограничения пользователей.
+CyberNews — микросервисный новостной портал по информационной безопасности. Работают автоматический RSS-сбор, публичный каталог статей, регистрация, авторизация, административные роли и модерация.
 
 В проекте используются Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, psycopg 3, PostgreSQL 17, RabbitMQ 4.3 с Management UI, Nginx и Docker Compose.
 
@@ -17,7 +17,17 @@ docker compose up -d --build
 docker compose ps
 ```
 
-`init-env.ps1` создаёт локальный `.env` из `.env.example`. При обновлении стенда скрипт добавляет недостающие секреты JWT и межсервисной аутентификации и сохраняет действующие пароли PostgreSQL и RabbitMQ. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все опубликованные порты привязаны к `127.0.0.1`.
+`init-env.ps1` создаёт локальный `.env` из `.env.example`. При обновлении стенда скрипт добавляет недостающие секреты JWT, Auth и импорта статей и сохраняет существующие ключи и пароли. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все опубликованные порты привязаны к `127.0.0.1`.
+
+## RSS и каталог новостей
+
+Collector при запуске собирает новости The Hacker News, BleepingComputer и Krebs on Security, а затем повторяет сбор каждые 30 минут. Articles хранит уникальные статьи и предоставляет поиск и фильтры. Для внешних RSS по умолчанию публикуются заголовок, краткая выдержка и ссылка на оригинал. Super Admin может управлять источниками, запускать сбор вручную и публиковать собственные материалы.
+
+- [Список опубликованных статей](http://localhost:8080/api/v1/articles/)
+- [Collector Swagger](http://localhost:8080/api/v1/collector/docs)
+- [Articles Swagger](http://localhost:8080/api/v1/articles/docs)
+
+Настройки сбора, права на контент и команды ручного обновления приведены в [руководстве RSS и каталога](docs/NEWS_RSS_API.md).
 
 ## Пользователи и модерация
 
@@ -35,13 +45,17 @@ Swagger UI доступны для [Auth](http://localhost:8080/api/v1/auth/docs
 
 ## Миграции
 
-Контейнеры Auth и Moderation применяют свои миграции при запуске. Для ручного повторного запуска на поднятом стеке используйте следующие команды.
+Контейнеры Auth, Moderation, Collector и Articles применяют свои миграции при запуске. Для ручного повторного запуска на поднятом стеке используйте следующие команды.
 
 ```powershell
 docker compose exec -T auth alembic upgrade head
 docker compose exec -T moderation alembic upgrade head
+docker compose exec -T collector alembic upgrade head
+docker compose exec -T articles alembic upgrade head
 docker compose exec -T auth alembic current
 docker compose exec -T moderation alembic current
+docker compose exec -T collector alembic current
+docker compose exec -T articles alembic current
 ```
 
 ## Проверка API
@@ -66,6 +80,13 @@ Smoke-тест проверяет привязки портов, Git, все с�
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r tests/stage2-requirements.txt
 .\scripts\smoke-test-stage2.ps1 -RunPytest -PythonExe .\.venv\Scripts\python.exe
+```
+
+Тесты третьего этапа поднимают отдельный Compose-стенд и используют локальные RSS/Atom-фикстуры. Рабочий Collector продолжает обращаться к реальным источникам.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r tests/stage3-requirements.txt
+.\scripts\smoke-test-stage3.ps1 -PythonExe .\.venv\Scripts\python.exe
 ```
 
 ## PostgreSQL и pgAdmin 4

@@ -39,6 +39,12 @@ services:
 
   collector:
     <<: *backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      articles:
+        condition: service_healthy
+    stop_grace_period: 30s
     build:
       context: ./services/collector
       additional_contexts: *build-contexts
@@ -48,6 +54,15 @@ services:
       DB_NAME: collector_db
       DB_USER: collector_svc
       DB_PASSWORD: ${COLLECTOR_DB_PASSWORD:?Run scripts/init-env.ps1 or set COLLECTOR_DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1}
+      ARTICLE_IMPORT_SECRET: ${ARTICLE_IMPORT_SECRET:?Run scripts/init-env.ps1}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
+      ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_URL:-http://articles:8000}
+      RSS_AUTO_SYNC: ${RSS_AUTO_SYNC:-true}
+      RSS_SYNC_INTERVAL_SECONDS: ${RSS_SYNC_INTERVAL_SECONDS:-1800}
+      RSS_MAX_BYTES: ${RSS_MAX_BYTES:-2097152}
+      RSS_ALLOWED_HOSTS: ${RSS_ALLOWED_HOSTS:-feeds.feedburner.com,www.bleepingcomputer.com,bleepingcomputer.com,krebsonsecurity.com,www.krebsonsecurity.com}
+      RES_OPTIONS: "attempts:1 timeout:2"
 
   articles:
     <<: *backend
@@ -60,6 +75,9 @@ services:
       DB_NAME: article_db
       DB_USER: article_svc
       DB_PASSWORD: ${ARTICLE_DB_PASSWORD:?Run scripts/init-env.ps1 or set ARTICLE_DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1}
+      ARTICLE_IMPORT_SECRET: ${ARTICLE_IMPORT_SECRET:?Run scripts/init-env.ps1}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
 
   community:
     <<: *backend
