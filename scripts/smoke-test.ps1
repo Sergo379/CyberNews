@@ -86,11 +86,13 @@ function Test-GitSecrets($ComposeConfig) {
             Where-Object { $_.Name -like '*_PASSWORD' } | ForEach-Object { $_.Value }
     )
     $secretValues += $ComposeConfig.services.rabbitmq.environment.RABBITMQ_DEFAULT_PASS
-    Test-Assert ($secretValues.Count -eq 8) 'Unexpected number of infrastructure passwords.'
+    $secretValues += $ComposeConfig.services.auth.environment.JWT_SECRET
+    $secretValues += $ComposeConfig.services.auth.environment.INTERNAL_AUTH_SECRET
+    Test-Assert ($secretValues.Count -eq 10) 'Unexpected number of infrastructure and application secrets.'
     foreach ($value in $secretValues) {
         Test-Assert ($value.Length -ge 16) 'An infrastructure password is too short for this stack.'
     }
-    Test-Assert (@($secretValues | Sort-Object -Unique).Count -eq 8) 'Infrastructure passwords must be distinct.'
+    Test-Assert (@($secretValues | Sort-Object -Unique).Count -eq 10) 'Secrets must be distinct.'
     $trackedSecrets = @($secretValues | & git grep --cached -l -F -f -)
     $grepStatus = $LASTEXITCODE
     Test-Assert ($grepStatus -eq 1 -and $trackedSecrets.Count -eq 0) 'Git index secret scan failed.'

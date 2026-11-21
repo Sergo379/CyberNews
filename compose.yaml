@@ -32,6 +32,10 @@ services:
       DB_NAME: auth_db
       DB_USER: auth_svc
       DB_PASSWORD: ${AUTH_DB_PASSWORD:?Run scripts/init-env.ps1 or set AUTH_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Run scripts/init-env.ps1 to configure JWT_SECRET}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1 to configure INTERNAL_AUTH_SECRET}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      ADMIN_SESSION_TTL_SECONDS: ${ADMIN_SESSION_TTL_SECONDS:-900}
 
   collector:
     <<: *backend
@@ -80,6 +84,8 @@ services:
       DB_NAME: moderation_db
       DB_USER: moderation_svc
       DB_PASSWORD: ${MODERATION_DB_PASSWORD:?Run scripts/init-env.ps1 or set MODERATION_DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Run scripts/init-env.ps1 to configure INTERNAL_AUTH_SECRET}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8000}
 
   notifications:
     <<: *backend
@@ -143,7 +149,7 @@ services:
     image: nginx:1.30.7-alpine
     restart: unless-stopped
     environment:
-      NGINX_ENVSUBST_FILTER: _UPSTREAM$
+      NGINX_ENVSUBST_FILTER: ^(AUTH|COLLECTOR|ARTICLES|COMMUNITY|MODERATION|NOTIFICATIONS)_UPSTREAM$
       AUTH_UPSTREAM: ${AUTH_UPSTREAM:-auth:8000}
       COLLECTOR_UPSTREAM: ${COLLECTOR_UPSTREAM:-collector:8000}
       ARTICLES_UPSTREAM: ${ARTICLES_UPSTREAM:-articles:8000}

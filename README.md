@@ -1,8 +1,8 @@
 # CyberNews
 
-CyberNews — микросервисный новостной портал по информационной безопасности. Этап 1 закладывает инфраструктуру и API для диагностики. Функции портала запланированы на следующие этапы.
+CyberNews — микросервисный новостной портал по информационной безопасности. В текущем этапе работают регистрация, профили, авторизация, административные роли, жалобы и ограничения пользователей.
 
-Стек: Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, psycopg 3, PostgreSQL 17, RabbitMQ 4.3 с Management UI, Nginx и Docker Compose.
+В проекте используются Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, psycopg 3, PostgreSQL 17, RabbitMQ 4.3 с Management UI, Nginx и Docker Compose.
 
 ## Запуск в Windows 11
 
@@ -17,7 +17,32 @@ docker compose up -d --build
 docker compose ps
 ```
 
-`init-env.ps1` создаёт локальный `.env` из `.env.example` с восемью независимыми случайными паролями и сохраняет существующий файл. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все публичные порты привязаны к `127.0.0.1`.
+`init-env.ps1` создаёт локальный `.env` из `.env.example`. При обновлении стенда скрипт добавляет недостающие секреты JWT и межсервисной аутентификации и сохраняет действующие пароли PostgreSQL и RabbitMQ. Порты `GATEWAY_PORT`, `POSTGRES_PORT` и `RABBITMQ_MANAGEMENT_PORT` можно изменить в `.env` перед запуском. Все опубликованные порты привязаны к `127.0.0.1`.
+
+## Пользователи и модерация
+
+После запуска создайте первого Super Admin в интерактивном терминале PowerShell.
+
+```powershell
+docker compose exec auth python -m app.bootstrap
+```
+
+Введите email, никнейм, основной пароль и отдельный административный пароль. Оба пароля вводятся скрыто и хранятся в виде хешей Argon2id. После первичной настройки новых администраторов назначает действующий Super Admin через API.
+
+Swagger UI доступны для [Auth](http://localhost:8080/api/v1/auth/docs) и [Moderation](http://localhost:8080/api/v1/moderation/docs). Обычный вход даёт `access_token` для заголовка `Authorization: Bearer …`. Для административных запросов дополнительно передайте `X-Admin-Session`, полученный через `POST /admin/unlock`. Сессия действует до 15 минут и завершается командой `POST /admin/lock`.
+
+Матрица ролей, список маршрутов, примеры PowerShell для регистрации, назначения Moderator, работы с жалобами, блокирования и снятия ограничений приведены в [руководстве API](docs/AUTH_MODERATION_API.md).
+
+## Миграции
+
+Контейнеры Auth и Moderation применяют свои миграции при запуске. Для ручного повторного запуска на поднятом стеке используйте следующие команды.
+
+```powershell
+docker compose exec -T auth alembic upgrade head
+docker compose exec -T moderation alembic upgrade head
+docker compose exec -T auth alembic current
+docker compose exec -T moderation alembic current
+```
 
 ## Проверка API
 
@@ -28,9 +53,20 @@ Invoke-RestMethod http://localhost:8080/api/v1/auth/ready
 .\scripts\smoke-test.ps1
 ```
 
-Под `/api/v1/{service}/` доступны корневой диагностический ответ, `health`, `ready`, `openapi.json` и `docs`. Подставьте `auth`, `collector`, `articles`, `community`, `moderation` или `notifications`. `/health` проверяет ответ процесса, `/ready` выполняет запрос к его базе PostgreSQL и возвращает `503`, когда база недоступна. Запросы можно сопоставить с JSON-логами по заголовку `X-Request-ID`.
+Под `/api/v1/{service}/` доступны корневой диагностический ответ, `health`, `ready`, `openapi.json` и `docs`. Подставьте `auth`, `collector`, `articles`, `community`, `moderation` или `notifications`. `/health` проверяет ответ процесса, `/ready` выполняет запрос к его базе PostgreSQL. Moderation дополнительно проверяет готовность Auth. Если зависимость недоступна, `/ready` возвращает `503`. Запросы можно сопоставить с JSON-логами по заголовку `X-Request-ID`.
 
 Smoke-тест проверяет привязки портов, Git, все сервисы через Gateway, разграничение прав PostgreSQL и RabbitMQ. Он кратковременно останавливает PostgreSQL проекта и перезапускает RabbitMQ проекта, проверяет сохранность временной записи и очереди и затем удаляет их. Выполняйте его в локальном стеке без параллельных инфраструктурных операций.
+
+Тесты второго этапа запускаются на отдельном стенде с временным PostgreSQL, отдельными секретами и динамическим портом Gateway. Понадобится Compose 2.24.4+ для тестовой конфигурации. Скрипт завершает работу тестовых контейнеров в блоке `finally`, сохраняя рабочие контейнеры и тома проекта.
+
+```powershell
+.\scripts\smoke-test-stage2.ps1
+
+# Полный набор pytest и smoke-тест. Укажите путь к Python 3.12 при необходимости.
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r tests/stage2-requirements.txt
+.\scripts\smoke-test-stage2.ps1 -RunPytest -PythonExe .\.venv\Scripts\python.exe
+```
 
 ## PostgreSQL и pgAdmin 4
 

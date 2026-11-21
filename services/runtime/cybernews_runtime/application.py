@@ -1,6 +1,7 @@
 import logging
 import re
 from contextlib import asynccontextmanager
+from collections.abc import Callable
 from http import HTTPStatus
 from time import perf_counter
 from uuid import uuid4
@@ -9,7 +10,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError, TimeoutError
 from starlette.exceptions import HTTPException
 
 from .config import Settings
@@ -21,7 +22,8 @@ valid_request_id = re.compile(r"[a-zA-Z0-9._-]{1,128}")
 
 
 def create_application(
-    title: str, settings: Settings, router: APIRouter, public_prefix: str
+    title: str, settings: Settings, router: APIRouter, public_prefix: str,
+    *, dependency_check: Callable[[], bool] | None = None, shutdown: Callable[[], None] | None = None,
 ) -> FastAPI:
     database = Database(settings.database_url)
 
@@ -31,6 +33,8 @@ def create_application(
             yield
         finally:
             database.engine.dispose()
+            if shutdown is not None:
+                shutdown()
 
     app = FastAPI(
         title=title,
@@ -41,6 +45,20 @@ def create_application(
         servers=[{"url": public_prefix}, {"url": "/"}],
     )
     app.state.database = database
+    default_openapi = app.openapi
+
+    def openapi():
+        schema = default_openapi()
+        for methods in schema["paths"].values():
+            for operation in methods.values():
+                if not isinstance(operation, dict):
+                    continue
+                schemes = {name for entry in operation.get("security", []) for name in entry}
+                if schemes == {"AccessToken", "AdminSession"}:
+                    operation["security"] = [{"AccessToken": [], "AdminSession": []}]
+        return schema
+
+    app.openapi = openapi
 
     @app.get("/docs", include_in_schema=False)
     def docs():
@@ -84,6 +102,13 @@ def create_application(
     async def invalid_request(_: Request, __: RequestValidationError):
         return JSONResponse({"detail": "Request validation failed"}, status_code=422)
 
+    async def database_unavailable(_: Request, exc: Exception):
+        logger.warning("Database unavailable", extra={"error_type": type(exc).__name__})
+        return JSONResponse({"detail": "Service Unavailable"}, status_code=503)
+
+    for error in (OperationalError, InterfaceError, TimeoutError):
+        app.add_exception_handler(error, database_unavailable)
+
     @router.get("/health", tags=["operations"])
     def health():
         return {"service": settings.service_name, "status": "ok"}
@@ -96,6 +121,11 @@ def create_application(
             logger.warning("Database readiness check failed", extra={"error_type": type(exc).__name__})
             return JSONResponse(
                 {"service": settings.service_name, "status": "unavailable", "database": "unavailable"},
+                status_code=503,
+            )
+        if dependency_check is not None and not dependency_check():
+            return JSONResponse(
+                {"service": settings.service_name, "status": "unavailable", "database": "ok", "auth": "unavailable"},
                 status_code=503,
             )
         return {"service": settings.service_name, "status": "ready", "database": "ok"}

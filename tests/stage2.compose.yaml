@@ -1,0 +1,21 @@
+services:
+  auth:
+    image: cybernews-stage2-auth:test
+  postgres:
+    ports: !reset []
+    volumes: !override
+      - ./infrastructure/postgres/10-initialize.sh:/docker-entrypoint-initdb.d/10-initialize.sh:ro
+    tmpfs:
+      - /var/lib/postgresql/data
+    environment:
+      PGDATA: /var/lib/cybernews-stage2
+  gateway:
+    ports: !override
+      - "127.0.0.1::8080"
+    environment:
+      AUTH_UPSTREAM: auth:8000
+      MODERATION_UPSTREAM: moderation:8000
+  moderation:
+    image: cybernews-stage2-moderation:test
+    environment:
+      AUTH_SERVICE_URL: http://auth:8000
