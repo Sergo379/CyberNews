@@ -1,0 +1,176 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-cybernews
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: default-deny-cybernews
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: cybernews
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-to-backends
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: gateway-to-backends
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - {protocol: TCP, port: 8000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-to-auth
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: backend-to-auth
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: auth
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app.kubernetes.io/name, operator: In, values: [collector, articles, community, moderation, notifications]}
+      ports:
+        - {protocol: TCP, port: 8000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-to-articles
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: backend-to-articles
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: articles
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app.kubernetes.io/name, operator: In, values: [collector, community, moderation, notifications]}
+      ports:
+        - {protocol: TCP, port: 8000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: community-to-moderation
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: community-to-moderation
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: moderation
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: community
+      ports:
+        - {protocol: TCP, port: 8000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: moderation-to-community
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: moderation-to-community
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: community
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: moderation
+      ports:
+        - {protocol: TCP, port: 8000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-and-jobs-to-postgres
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: backend-and-jobs-to-postgres
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app.kubernetes.io/component, operator: In, values: [backend, migration]}
+      ports:
+        - {protocol: TCP, port: 5432}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: publish-and-consume-rabbitmq
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: publish-and-consume-rabbitmq
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app.kubernetes.io/name, operator: In, values: [articles, notifications]}
+      ports:
+        - {protocol: TCP, port: 5672}

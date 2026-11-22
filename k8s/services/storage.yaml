@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: cybernews
+  ports:
+    - {name: postgres, port: 5432, targetPort: postgres}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: postgres-headless
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: cybernews
+  ports:
+    - {name: postgres, port: 5432, targetPort: postgres}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: broker
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: cybernews
+  ports:
+    - {name: amqp, port: 5672, targetPort: amqp}
+    - {name: management, port: 15672, targetPort: management}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-headless
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: rabbitmq-headless
+    app.kubernetes.io/component: broker
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: cybernews
+  ports:
+    - {name: amqp, port: 5672, targetPort: amqp}

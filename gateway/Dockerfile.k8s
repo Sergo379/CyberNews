@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+FROM nginx:1.30.7-alpine
+
+COPY frontend/ /usr/share/nginx/cybernews/
+COPY gateway/default.conf.template /etc/nginx/templates/cybernews.conf
+COPY gateway/frontend-headers.conf /etc/nginx/cybernews-frontend-headers.conf
+COPY gateway/nginx.k8s.conf /etc/nginx/nginx.conf
+COPY --chmod=0755 gateway/k8s-entrypoint.sh /usr/local/bin/cybernews-gateway
+
+RUN sed -i -e 's/resolver 127\.0\.0\.11 /resolver ${KUBE_DNS_RESOLVERS} /' \
+    -e 's/"service":"gateway","status":"ok"/"service":"gateway","status":"ok","environment":"kubernetes"/' \
+    /etc/nginx/templates/cybernews.conf \
+    && grep -q 'resolver ${KUBE_DNS_RESOLVERS}' /etc/nginx/templates/cybernews.conf \
+    && nginx -v
+
+USER 101:101
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/cybernews-gateway"]
+CMD ["nginx", "-g", "daemon off;"]

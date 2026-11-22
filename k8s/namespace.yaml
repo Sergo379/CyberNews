@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: cybernews-lab3
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline

@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: broker
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+spec:
+  serviceName: rabbitmq-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
+      app.kubernetes.io/part-of: cybernews
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rabbitmq
+        app.kubernetes.io/component: broker
+        app.kubernetes.io/part-of: cybernews
+        app.kubernetes.io/version: lab3
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4.3.8-management
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: rabbitmq-config
+            - secretRef:
+                name: rabbitmq-credentials
+          ports:
+            - {name: amqp, containerPort: 5672}
+            - {name: management, containerPort: 15672}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+            - name: configuration
+              mountPath: /etc/rabbitmq/conf.d/30-cybernews.conf
+              subPath: rabbitmq.conf
+              readOnly: true
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          startupProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_running"]
+            periodSeconds: 8
+            timeoutSeconds: 7
+            failureThreshold: 24
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+            periodSeconds: 7
+            timeoutSeconds: 6
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_running"]
+            periodSeconds: 15
+            timeoutSeconds: 8
+            failureThreshold: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rabbitmq-data
+        - name: configuration
+          configMap:
+            name: rabbitmq-runtime

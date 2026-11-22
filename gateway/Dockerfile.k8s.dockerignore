@@ -1,0 +1,10 @@
+**
+!frontend/
+!frontend/**
+frontend/**/README.md
+frontend/README.md
+!gateway/
+!gateway/default.conf.template
+!gateway/frontend-headers.conf
+!gateway/nginx.k8s.conf
+!gateway/k8s-entrypoint.sh

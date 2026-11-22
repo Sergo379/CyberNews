@@ -4,6 +4,8 @@ CyberNews — микросервисный новостной портал по 
 
 **[Лабораторная работа №2 · полный комплект для защиты](lab2/README.md)** · [Сценарий демонстрации](lab2/DEMO.md) · [Результаты проверок](lab2/EVIDENCE.md).
 
+**[Лабораторная работа №3 · Kubernetes](lab3/README.md)** · [Защита](lab3/DEMO.md) · [Результаты развёртывания](lab3/EVIDENCE.md). Версия Kubernetes использует отдельные базы и доступна через loopback port-forward на `18080`.
+
 В проекте используются Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, psycopg 3, PostgreSQL 17, RabbitMQ 4.3 с Management UI, Nginx и Docker Compose.
 
 ## Запуск в Windows 11

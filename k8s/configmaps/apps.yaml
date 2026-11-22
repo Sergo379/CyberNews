@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: backend-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  LOG_LEVEL: "INFO"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: auth-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  SERVICE_NAME: "auth"
+  DB_NAME: "auth_db"
+  DB_USER: "auth_svc"
+  ACCESS_TOKEN_TTL_SECONDS: "900"
+  ADMIN_SESSION_TTL_SECONDS: "900"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collector-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: collector-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  SERVICE_NAME: "collector"
+  DB_NAME: "collector_db"
+  DB_USER: "collector_svc"
+  AUTH_SERVICE_URL: "http://auth:8000"
+  ARTICLE_SERVICE_URL: "http://articles:8000"
+  RSS_AUTO_SYNC: "true"
+  RSS_SYNC_INTERVAL_SECONDS: "1800"
+  RSS_MAX_BYTES: "2097152"
+  RSS_ALLOWED_HOSTS: "feeds.feedburner.com,www.bleepingcomputer.com,bleepingcomputer.com,krebsonsecurity.com,www.krebsonsecurity.com"
+  RES_OPTIONS: "attempts:1 timeout:2"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: articles-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: articles-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  SERVICE_NAME: "articles"
+  DB_NAME: "article_db"
+  DB_USER: "article_svc"
+  AUTH_SERVICE_URL: "http://auth:8000"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_USER: "cybernews_lab3"
+  RABBITMQ_VHOST: "cybernews"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: community-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: community-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  SERVICE_NAME: "community"
+  DB_NAME: "community_db"
+  DB_USER: "community_svc"
+  AUTH_SERVICE_URL: "http://auth:8000"
+  ARTICLE_SERVICE_URL: "http://articles:8000"
+  MODERATION_SERVICE_URL: "http://moderation:8000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: moderation-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: moderation-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  SERVICE_NAME: "moderation"
+  DB_NAME: "moderation_db"
+  DB_USER: "moderation_svc"
+  AUTH_SERVICE_URL: "http://auth:8000"
+  ARTICLE_SERVICE_URL: "http://articles:8000"
+  COMMUNITY_SERVICE_URL: "http://community:8000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notifications-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: notifications-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  SERVICE_NAME: "notifications"
+  DB_NAME: "notification_db"
+  DB_USER: "notification_svc"
+  AUTH_SERVICE_URL: "http://auth:8000"
+  ARTICLE_SERVICE_URL: "http://articles:8000"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_USER: "cybernews_lab3"
+  RABBITMQ_VHOST: "cybernews"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: cybernews-lab3
+  labels:
+    app.kubernetes.io/name: gateway-config
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: cybernews
+    app.kubernetes.io/version: lab3
+data:
+  BACKEND_PORT: "8000"
